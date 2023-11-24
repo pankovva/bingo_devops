@@ -1,0 +1,169 @@
+---
+- name: Install PostgreSQL
+  hosts: db
+  become: true
+
+  tasks:
+
+    - name: Create FS 
+      community.general.filesystem:
+        fstype: ext4
+        dev: /dev/vdb
+
+    - name: Mount disk for db
+      ansible.posix.mount:
+        path: /opt
+        src: /dev/vdb
+        fstype: ext4
+        state: mounted
+
+    - name: Add key for PostgreSQL
+      ansible.builtin.apt_key:
+        url: https://www.postgresql.org/media/keys/ACCC4CF8.asc
+        state: present
+
+    - name: Add repo PostgreSQL
+      ansible.builtin.apt_repository:
+        repo: "deb https://apt.postgresql.org/pub/repos/apt jammy-pgdg main"
+        state: present
+        filename: pgdg
+
+    - name: Install packeges
+      ansible.builtin.apt:
+        name: 
+          - postgresql
+          - libpq-dev
+          - python3-psycopg2
+        update_cache: yes
+
+    - name: Update config PostgreSQL
+      ansible.builtin.template:
+        src: ./files/pg_config.j2
+        dest: /etc/postgresql/16/main/conf.d/bingo.conf
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Create a directory if it does not exist
+      ansible.builtin.file:
+        path: /opt/data
+        state: directory
+        mode: '0755'
+        owner: postgres
+        group: postgres
+
+    - name: Reload service httpd, in all cases
+      ansible.builtin.service:
+        name: postgresql
+        state: stopped
+
+    - name: "Initialize PostgreSQL"
+      become_user: postgres
+      ansible.builtin.shell: 
+        cmd: "/usr/lib/postgresql/16/bin/initdb -D /opt/data"
+
+    - name: Grant access remote connect
+      community.postgresql.postgresql_pg_hba:
+        dest: /etc/postgresql/16/main/pg_hba.conf
+        contype: host
+        users: bingo
+        source: 192.168.68.0/24
+        databases: bingo
+        method: password
+        create: true
+
+    - name: Start PostgreSQL
+      ansible.builtin.service:
+        name: postgresql
+        state: started
+
+
+    - name: Add user Bingo
+      become_user: postgres
+      community.postgresql.postgresql_user:
+        name: bingo
+        password: bingo
+
+    - name: Create a new database bingo
+      become_user: postgres
+      community.postgresql.postgresql_db:
+        name: bingo
+        owner: bingo
+
+    - name: Create a directory for bingo
+      ansible.builtin.file:
+        path: /opt/bingo
+        state: directory
+        mode: '0755'
+        owner: ansible
+        group: ansible
+
+    - name: Create a directory log
+      ansible.builtin.file:
+        path: /opt/bongo/logs/12690b3e5e
+        state: directory
+        mode: '0755'
+        owner: ansible
+        group: ansible
+
+    - name: log file
+      ansible.builtin.file:
+        path: /opt/bongo/logs/12690b3e5e/main.log
+        state: touch
+        mode: '0755'
+        owner: ansible
+        group: ansible
+
+    - name: Copy bingo
+      ansible.builtin.copy:
+        src: ./files/bingo
+        dest: /opt/bingo/bingo
+        owner: ansible
+        group: ansible
+        mode: '0744'
+
+    - name: Copy config
+      ansible.builtin.copy:
+        src: ./files/config.yaml
+        dest: /opt/bingo/config.yaml
+        owner: ansible
+        group: ansible
+        mode: '0644'
+
+    - name: "Bingo prepare_db"
+      become_user: ansible
+      ansible.builtin.shell: 
+        cmd: "./bingo prepare_db"
+        chdir: /opt/bingo
+
+    - name: Create index
+      become_user: postgres
+      community.postgresql.postgresql_idx:
+        db: bingo
+        table: "{{ item }}"
+        columns: id
+        name: "idx_{{ item }}"
+      loop:
+        - customers
+        - movies
+        - sessions
+
+    # - name: Create index movies
+    #   become_user: postgres
+    #   community.postgresql.postgresql_idx:
+    #     db: bingo
+    #     table: movies
+    #     columns: id
+    #     name: idx_movies
+
+    # - name: Create index sessions
+    #   become_user: postgres
+    #   community.postgresql.postgresql_idx:
+    #     db: bingo
+    #     table: sessions
+    #     columns: id
+    #     name: idx_sessions
+
+
+
+

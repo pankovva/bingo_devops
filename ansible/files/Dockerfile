@@ -1,0 +1,19 @@
+FROM alpine
+
+
+RUN mkdir -p /opt/bingo && \
+             mkdir -p /opt/bongo/logs/12690b3e5e && \
+             touch /opt/bongo/logs/12690b3e5e/main.log && \
+             addgroup --gid 1000 nonroot && \
+             adduser --u 1000 -G nonroot -g "" -D  nonroot && \
+             apk --no-cache  add strace && \
+             rm -vrf /var/cache/apk/*
+
+COPY --chown=nonroot:nonroot bingo config.yaml /opt/bingo/ 
+RUN chown -R nonroot:nonroot /opt && \
+    chmod -R 755 /opt/bingo/bingo
+
+WORKDIR /opt/bingo
+EXPOSE 15220/TCP
+USER nonroot
+CMD ["./bingo", "run_server" ]

@@ -1,0 +1,18 @@
+version: '3'
+services:
+  bingo:
+    image: bingo-alpine
+    restart: always
+    ports:
+      - 15220:80
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: "1"
+    healthcheck:
+      start_period: 60s
+      timeout: 1s
+      interval: 2s
+      retries: 2
+      test: "curl -f http://localhost:15220/ping || exit 1"

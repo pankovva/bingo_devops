@@ -1,0 +1,10 @@
+student_email: v.a.pankov@yandex.ru
+postgres_cluster:
+  hosts:
+  - address: db-main.bingo.local
+    port: 5432
+  user: bingo
+  password: bingo
+  db_name: bingo
+  ssl_mode: disable
+  use_closest_node: false
