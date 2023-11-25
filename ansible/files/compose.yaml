@@ -1,10 +1,10 @@
 version: '3'
 services:
   bingo:
-    image: bingo-alpine
+    image: bingo-alpine:1.0
     restart: always
     ports:
-      - 15220:80
+      - 15220:15220
     deploy:
       resources:
         limits:

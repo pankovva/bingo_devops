@@ -1,0 +1,69 @@
+---
+- name: Install APP
+  hosts: app
+  become: true
+
+  tasks:
+
+    - name: Install docker depends
+      ansible.builtin.apt:
+        name: 
+          - ca-certificates
+          - curl
+          - gnupg
+          - python3-pip
+        update_cache: yes
+
+    - name: Add Docker GPG apt Key
+      ansible.builtin.apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+
+    - name: Add Docker Repository
+      apt_repository:
+        repo: "deb https://download.docker.com/linux/ubuntu  jammy stable"
+        state: present
+
+    - name: Install Docker package
+      ansible.builtin.apt:
+        name: 
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-buildx-plugin
+          - docker-compose-plugin
+        update_cache: yes
+
+    - name: Install docker python package
+      ansible.builtin.pip:
+        name: 
+          - docker
+          - docker-compose
+
+    - name: Copy docker image
+      ansible.builtin.copy:
+        src: ./files/bingo-alpine.tar
+        dest: /tmp/bingo-alpine.tar
+        owner: ansible
+        group: ansible
+        mode: '0744'
+
+    - name: Load image bingo
+      community.docker.docker_image_load:
+        path: /tmp/bingo-alpine.tar
+
+    - name: Start bingo project
+      community.docker.docker_compose:
+        project_name: bingo
+        definition: "{{ lookup('file', './files/compose.yaml') | from_yaml }}"
+
+    # - name: Create a data container
+    #   community.docker.docker_container:
+    #     name: autoheal-ansible
+    #     image: willfarrell/autoheal
+    #     restart_policy: "always"
+    #     devices:
+    #       - /var/run/docker.sock:/var/run/docker.sock
+    #     env:
+    #       AUTOHEAL_CONTAINER_LABEL: all
+

@@ -6,7 +6,7 @@ RUN mkdir -p /opt/bingo && \
              touch /opt/bongo/logs/12690b3e5e/main.log && \
              addgroup --gid 1000 nonroot && \
              adduser --u 1000 -G nonroot -g "" -D  nonroot && \
-             apk --no-cache  add strace && \
+             apk --no-cache  add strace curl && \
              rm -vrf /var/cache/apk/*
 
 COPY --chown=nonroot:nonroot bingo config.yaml /opt/bingo/ 

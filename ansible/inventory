@@ -1,7 +1,19 @@
 [db]
-db-main ansible_host=84.201.140.207
+db-main ansible_host=db-main.bingo.local
 
+[app]
+app1 ansible_host=app1.bingo.local
+app2 ansible_host=app2.bingo.local
+
+[web]
+web ansible_host=62.84.122.238
 
 [all:vars]
 ansible_user=ansible
 ansible_ssh_private_key_file = ./ansible_ssh_key
+
+[app:vars]
+ansible_ssh_common_args='-o ProxyCommand="ssh -W %h:%p -q bastion"'
+
+[db:vars]
+ansible_ssh_common_args='-o ProxyCommand="ssh -W %h:%p -q bastion"'

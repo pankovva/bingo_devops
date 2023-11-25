@@ -1,10 +1,19 @@
-# data "yandex_vpc_subnet" "network" {
-#   name = "vpc-bingo-ru-central1-b"
-# }
-
-
 resource "yandex_vpc_network" "net-bingo" {
   name = "net-bingo"
+}
+
+resource "yandex_vpc_gateway" "egress-gateway" {
+  name = "gw"
+  shared_egress_gateway {}
+}
+
+resource "yandex_vpc_route_table" "rt-b" {
+  name       = "main"
+  network_id = yandex_vpc_network.net-bingo.id
+  static_route {
+    destination_prefix = "0.0.0.0/0"
+    gateway_id         = yandex_vpc_gateway.egress-gateway.id
+  }
 }
 
 resource "yandex_vpc_subnet" "main-b" {
@@ -12,6 +21,7 @@ resource "yandex_vpc_subnet" "main-b" {
   zone           = "ru-central1-b"
   network_id     = yandex_vpc_network.net-bingo.id
   v4_cidr_blocks = ["192.168.68.0/24"]
+  route_table_id = yandex_vpc_route_table.rt-b.id
   dhcp_options {
     domain_name = "bingo.local"
   }
@@ -29,10 +39,10 @@ resource "yandex_dns_zone" "bingo-dns" {
 }
 
 resource "yandex_compute_disk" "ssd" {
-  name       = "data"
-  type       = "network-ssd"
-  zone       = "ru-central1-b"
-  size       = 20
+  name = "data"
+  type = "network-ssd"
+  zone = "ru-central1-b"
+  size = 20
 }
 
 resource "yandex_compute_instance" "instance" {
@@ -47,7 +57,7 @@ resource "yandex_compute_instance" "instance" {
   }
   network_interface {
     subnet_id = yandex_vpc_subnet.main-b.id
-    nat       = true
+    nat       = false
     dns_record {
       fqdn        = "db-main"
       dns_zone_id = yandex_dns_zone.bingo-dns.id
@@ -57,7 +67,6 @@ resource "yandex_compute_instance" "instance" {
     initialize_params {
       image_id = "fd8tkfhqgbht3sigr37c"
       size     = 20
-      # type     = "network-ssd"
     }
   }
   secondary_disk {
@@ -72,3 +81,36 @@ resource "yandex_compute_instance" "instance" {
   }
 }
 
+resource "yandex_compute_instance" "vm" {
+  for_each                  = var.vms
+  name                      = each.value["name"]
+  allow_stopping_for_update = true
+  platform_id               = "standard-v3"
+  hostname                  = each.value["name"]
+  resources {
+    cores         = each.value["cores"]
+    memory        = each.value["memory"]
+    core_fraction = each.value["core_fraction"]
+  }
+  network_interface {
+    subnet_id = yandex_vpc_subnet.main-b.id
+    nat       = each.value["nat"]
+    dns_record {
+      fqdn        = each.value["name"]
+      dns_zone_id = yandex_dns_zone.bingo-dns.id
+    }
+  }
+  boot_disk {
+    initialize_params {
+      image_id = "fd8tkfhqgbht3sigr37c"
+      size     = 20
+    }
+  }
+
+  scheduling_policy {
+    preemptible = true
+  }
+  metadata = {
+    "user-data" = "${file("user.yaml")}"
+  }
+}
