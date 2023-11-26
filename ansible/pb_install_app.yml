@@ -40,6 +40,16 @@
           - docker
           - docker-compose
 
+    - name: Copy docker config
+      ansible.builtin.copy:
+        src: ./files/daemon.json
+        dest: /etc/docker/daemon.json
+
+    - name: Restart docker
+      ansible.builtin.service:
+        name: docker
+        state: restarted
+
     - name: Copy docker image
       ansible.builtin.copy:
         src: ./files/bingo-alpine.tar
@@ -47,6 +57,11 @@
         owner: ansible
         group: ansible
         mode: '0744'
+
+    - name: Copy config
+      ansible.builtin.copy:
+        src: ./files/config.yaml
+        dest: /tmp/config.yaml
 
     - name: Load image bingo
       community.docker.docker_image_load:
@@ -56,14 +71,4 @@
       community.docker.docker_compose:
         project_name: bingo
         definition: "{{ lookup('file', './files/compose.yaml') | from_yaml }}"
-
-    # - name: Create a data container
-    #   community.docker.docker_container:
-    #     name: autoheal-ansible
-    #     image: willfarrell/autoheal
-    #     restart_policy: "always"
-    #     devices:
-    #       - /var/run/docker.sock:/var/run/docker.sock
-    #     env:
-    #       AUTOHEAL_CONTAINER_LABEL: all
 

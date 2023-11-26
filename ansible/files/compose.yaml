@@ -5,6 +5,8 @@ services:
     restart: always
     ports:
       - 15220:15220
+    volumes:
+      - /tmp/config.yaml:/opt/bingo/config.yaml
     deploy:
       resources:
         limits:
@@ -16,3 +18,4 @@ services:
       interval: 2s
       retries: 2
       test: "curl -f http://localhost:15220/ping || exit 1"
+      

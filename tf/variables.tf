@@ -11,6 +11,7 @@ variable "vms" {
     memory        = number
     core_fraction = number
     disk_size     = number
+    disk_type     = string
     nat           = bool
   }))
 }

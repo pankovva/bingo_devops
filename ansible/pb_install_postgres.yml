@@ -5,18 +5,6 @@
 
   tasks:
 
-    - name: Create FS 
-      community.general.filesystem:
-        fstype: ext4
-        dev: /dev/vdb
-
-    - name: Mount disk for db
-      ansible.posix.mount:
-        path: /opt
-        src: /dev/vdb
-        fstype: ext4
-        state: mounted
-
     - name: Add key for PostgreSQL
       ansible.builtin.apt_key:
         url: https://www.postgresql.org/media/keys/ACCC4CF8.asc
@@ -32,6 +20,8 @@
       ansible.builtin.apt:
         name: 
           - postgresql
+          - postgresql-contrib
+          - pgbouncer
           - libpq-dev
           - python3-psycopg2
         update_cache: yes
@@ -44,39 +34,37 @@
         group: root
         mode: '0644'
 
-    - name: Create a directory if it does not exist
-      ansible.builtin.file:
-        path: /opt/data
-        state: directory
-        mode: '0755'
-        owner: postgres
-        group: postgres
+    - name: Copy config pgbouncer
+      ansible.builtin.copy:
+        src: ./files/pgbouncer.ini
+        dest: /etc/pgbouncer/pgbouncer.ini
+        mode: '0644'
 
-    - name: Stop service PostgreSQL
+    - name: Copy pgbouncer userlist
+      ansible.builtin.copy:
+        src: ./files/pgb_userlist.txt
+        dest: /etc/pgbouncer/userlist.txt
+        mode: '0644'
+
+    - name: Restart PostgreSQL
       ansible.builtin.service:
         name: postgresql
-        state: stopped
+        state: restarted
 
-    - name: "Initialize PostgreSQL"
-      become_user: postgres
-      ansible.builtin.shell: 
-        cmd: "/usr/lib/postgresql/16/bin/initdb -D /opt/data"
+    - name: Restart pgbouncer
+      ansible.builtin.service:
+        name: pgbouncer
+        state: restarted
 
     - name: Grant access remote connect
       community.postgresql.postgresql_pg_hba:
         dest: /etc/postgresql/16/main/pg_hba.conf
         contype: host
         users: bingo
-        source: 192.168.68.0/24
+        source: ::/0
         databases: bingo
         method: password
         create: true
-
-    - name: Start PostgreSQL
-      ansible.builtin.service:
-        name: postgresql
-        state: started
-
 
     - name: Add user Bingo
       become_user: postgres
