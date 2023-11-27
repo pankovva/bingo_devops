@@ -26,28 +26,18 @@
           - python3-psycopg2
         update_cache: yes
 
-    - name: Update config PostgreSQL
-      ansible.builtin.template:
-        src: ./files/pg_config.j2
-        dest: /etc/postgresql/16/main/conf.d/bingo.conf
-        mode: '0644'
-
-    - name: Copy config pgbouncer
+    - name: Copy config
       ansible.builtin.copy:
-        src: "./files/{{ item }}"
-        dest: /etc/pgbouncer/
+        src: "./files/postgresql/{{ item.name }}"
+        dest: "{{ item.dest }}"
         mode: '0644'
       loop:
-        - userlist.txt
-        - pgbouncer.ini
-
-    - name: Restart Service
-      ansible.builtin.service:
-        name: "{{ item }}"
-        state: restarted
-      loop:
-        - postgresql
-        - pgbouncer
+        - name: postgresql_bingo.conf
+          dest: /etc/postgresql/16/main/conf.d/
+        - name: userlist.txt
+          dest: /etc/pgbouncer/
+        - name: pgbouncer.ini
+          dest: /etc/pgbouncer/
 
     - name: Grant access remote connect
       community.postgresql.postgresql_pg_hba:
@@ -58,6 +48,14 @@
         databases: bingo
         method: password
         create: true
+
+    - name: Restart Service
+      ansible.builtin.service:
+        name: "{{ item }}"
+        state: restarted
+      loop:
+        - postgresql
+        - pgbouncer
 
     - name: Add user Bingo
       become_user: postgres
@@ -86,13 +84,13 @@
       ansible.builtin.file:
         path: /opt/bongo/logs/12690b3e5e/main.log
         state: touch
-        mode: '0755'
+        mode: '0644'
         owner: ansible
         group: ansible
 
     - name: Copy bingo
       ansible.builtin.copy:
-        src: "./files/{{ item.file }}"
+        src: "./files/bingo/{{ item.file }}"
         dest: /opt/bingo/
         owner: ansible
         group: ansible

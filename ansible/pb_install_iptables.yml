@@ -1,0 +1,51 @@
+---
+- name: Install APP
+  hosts: app
+  become: true
+
+  tasks:
+
+    - name: Install docker depends
+      ansible.builtin.apt:
+        name: 
+          - iptables-persistent
+        update_cache: yes
+
+   - name: Allow related and established connections
+      ansible.builtin.iptables:
+        chain: INPUT
+        ctstate: ESTABLISHED,RELATED
+        jump: ACCEPT
+      notify:
+        - Save iptables
+
+    - name: Add iptables rules
+      ansible.builtin.iptables:
+        chain: INPUT
+        protocol: tcp
+        destination_port: "{{ item.dst_port }}"
+        source: "{{ item.source | default('0.0.0.0/0') }}"
+        ctstate: NEW
+        syn: match
+        jump: ACCEPT
+      loop: "{{ iptables_rules }}"
+      notify:
+        - Save iptables
+
+    - name: Set Drop policy
+      ansible.builtin.iptables:
+        chain: INPUT
+        policy: DROP
+      notify:
+        - Save iptables
+
+  handlers:
+    - name: Restart docker
+      ansible.builtin.service:
+        name: docker
+        state: restarted
+        
+    - name: Save iptables
+      community.general.iptables_state:
+        state: saved
+        path: /etc/iptables/rules.v4
