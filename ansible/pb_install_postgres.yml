@@ -30,31 +30,24 @@
       ansible.builtin.template:
         src: ./files/pg_config.j2
         dest: /etc/postgresql/16/main/conf.d/bingo.conf
-        owner: root
-        group: root
         mode: '0644'
 
     - name: Copy config pgbouncer
       ansible.builtin.copy:
-        src: ./files/pgbouncer.ini
-        dest: /etc/pgbouncer/pgbouncer.ini
+        src: "./files/{{ item }}"
+        dest: /etc/pgbouncer/
         mode: '0644'
+      loop:
+        - userlist.txt
+        - pgbouncer.ini
 
-    - name: Copy pgbouncer userlist
-      ansible.builtin.copy:
-        src: ./files/pgb_userlist.txt
-        dest: /etc/pgbouncer/userlist.txt
-        mode: '0644'
-
-    - name: Restart PostgreSQL
+    - name: Restart Service
       ansible.builtin.service:
-        name: postgresql
+        name: "{{ item }}"
         state: restarted
-
-    - name: Restart pgbouncer
-      ansible.builtin.service:
-        name: pgbouncer
-        state: restarted
+      loop:
+        - postgresql
+        - pgbouncer
 
     - name: Grant access remote connect
       community.postgresql.postgresql_pg_hba:
@@ -80,19 +73,14 @@
 
     - name: Create a directory for bingo
       ansible.builtin.file:
-        path: /opt/bingo
+        path: "{{ item }}"
         state: directory
         mode: '0755'
         owner: ansible
         group: ansible
-
-    - name: Create a directory log
-      ansible.builtin.file:
-        path: /opt/bongo/logs/12690b3e5e
-        state: directory
-        mode: '0755'
-        owner: ansible
-        group: ansible
+      loop:
+        - /opt/bingo
+        - /opt/bongo/logs/12690b3e5e
 
     - name: log file
       ansible.builtin.file:
@@ -104,19 +92,16 @@
 
     - name: Copy bingo
       ansible.builtin.copy:
-        src: ./files/bingo
-        dest: /opt/bingo/bingo
+        src: "./files/{{ item.file }}"
+        dest: /opt/bingo/
         owner: ansible
         group: ansible
-        mode: '0744'
-
-    - name: Copy config
-      ansible.builtin.copy:
-        src: ./files/config.yaml
-        dest: /opt/bingo/config.yaml
-        owner: ansible
-        group: ansible
-        mode: '0644'
+        mode: "{{ item.mode }}"
+      loop:
+        - file: bingo
+          mode: "0744"
+        - file: config.yaml
+          mode: "0644"
 
     - name: "Bingo prepare_db"
       become_user: ansible
@@ -131,6 +116,7 @@
         table: "{{ item }}"
         columns: id
         name: "idx_{{ item }}"
+        unique: true
       loop:
         - customers
         - movies

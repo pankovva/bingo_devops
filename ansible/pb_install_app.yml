@@ -56,7 +56,7 @@
         dest: /tmp/bingo-alpine.tar
         owner: ansible
         group: ansible
-        mode: '0744'
+        mode: '0644'
 
     - name: Copy config
       ansible.builtin.copy:
@@ -72,3 +72,13 @@
         project_name: bingo
         definition: "{{ lookup('file', './files/compose.yaml') | from_yaml }}"
 
+    - name: Create autoheal container
+      community.docker.docker_container:
+        name: autoheal
+        image: willfarrell/autoheal
+        state: started
+        restart: true
+        volumes:
+          - /var/run/docker.sock:/var/run/docker.sock
+        env:
+          AUTOHEAL_CONTAINER_LABEL: all

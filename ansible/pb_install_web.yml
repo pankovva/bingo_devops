@@ -8,7 +8,6 @@
     - name: Install depends 
       ansible.builtin.apt:
         name: 
-          - nginx
           - curl
           - gnupg2
           - ca-certificates
@@ -32,9 +31,14 @@
 
     - name: Copy config nginx
       ansible.builtin.copy:
-        src: ./files/nginx.conf
-        dest: /etc/nginx/nginx.conf
-        mode: '0744'
+        src: "./files/{{ item }}"
+        dest: /etc/nginx/
+        mode: '0644'
+      loop:
+        - nginx.conf
+        - nginx-selfsigned.crt
+        - nginx-selfsigned.key
+        - dhparam.pem
 
     - name: Create a directory for cache
       ansible.builtin.file:
