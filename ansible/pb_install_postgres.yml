@@ -38,24 +38,20 @@
           dest: /etc/pgbouncer/
         - name: pgbouncer.ini
           dest: /etc/pgbouncer/
+      notify:
+        - Restart Service
 
     - name: Grant access remote connect
       community.postgresql.postgresql_pg_hba:
         dest: /etc/postgresql/16/main/pg_hba.conf
         contype: host
         users: bingo
-        source: ::/0
+        source: 192.168.68.0/24
         databases: bingo
         method: password
         create: true
-
-    - name: Restart Service
-      ansible.builtin.service:
-        name: "{{ item }}"
-        state: restarted
-      loop:
-        - postgresql
-        - pgbouncer
+      notify:
+        - Restart Service
 
     - name: Add user Bingo
       become_user: postgres
@@ -68,6 +64,9 @@
       community.postgresql.postgresql_db:
         name: bingo
         owner: bingo
+      notify:
+        - Prepare bingo db
+        - Create index
 
     - name: Create a directory for bingo
       ansible.builtin.file:
@@ -101,7 +100,52 @@
         - file: config.yaml
           mode: "0644"
 
-    - name: "Bingo prepare_db"
+    - name: Add the user postgres-exporter
+      ansible.builtin.user:
+        name: postgres-exporter
+        create_home: false
+        shell: /bin/false
+        system: true
+
+    - name: Create a directory for postgres-exporter
+      ansible.builtin.file:
+        path:  /opt/postgres_exporter
+        state: directory
+        owner: postgres-exporter
+        group: postgres-exporter
+
+    - name: Copy postgres-exporter
+      ansible.builtin.copy:
+        src: "./files/postgresql/{{ item.file }}"
+        dest: /opt/postgres_exporter/
+        owner: postgres-exporter
+        group: postgres-exporter
+        mode: "{{ item.mode }}"
+      loop:
+        - file: postgres_exporter
+          mode: "0744"
+        - file: postgres_exporter.env
+          mode: "0644"
+
+    - name: Copy exporter service
+      ansible.builtin.copy:
+        src: ./files/postgresql/postgres_exporter.service
+        dest: /etc/systemd/system/
+      notify:
+        - Restart exporter
+    
+
+  handlers:
+
+    - name: Restart Service
+      ansible.builtin.service:
+        name: "{{ item }}"
+        state: restarted
+      loop:
+        - postgresql
+        - pgbouncer
+
+    - name: Prepare bingo db
       become_user: ansible
       ansible.builtin.shell: 
         cmd: "./bingo prepare_db"
@@ -119,6 +163,12 @@
         - customers
         - movies
         - sessions
+
+    - name: Restart exporter
+      ansible.builtin.service:
+        name: postgres_exporter
+        state: restarted
+        daemon_reload: true
 
 
 

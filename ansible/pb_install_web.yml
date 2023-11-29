@@ -13,14 +13,14 @@
           - ca-certificates
         update_cache: yes
 
-    - name: Add Docker GPG apt Key
+    - name: Add nginx GPG apt Key
       ansible.builtin.apt_key:
         url: https://nginx.org/keys/nginx_signing.key
         state: present
 
-    - name: Add Docker Repository
+    - name: Add nginx repository
       apt_repository:
-        repo: "deb http://nginx.org/packages/ubuntu  jammy nginx"
+        repo: "deb http://nginx.org/packages/mainline/ubuntu jammy nginx"
         state: present
 
     - name: Install nginx
@@ -51,19 +51,6 @@
         group: www-data
       notify:
         - Restart nginx
-
-    - name: Copy exporter
-      ansible.builtin.copy:
-        src: "./files/nginx/{{ item.name }}"
-        dest: "{{ item.dest }}"
-        mode: "{{ item.mode | default('0644') }}"
-      loop:
-        - name: nginx-prometheus-exporter
-          mode: "0744"
-          dest: /usr/local/bin/
-        - name: nginx_exporter.service
-          dest: /etc/systemd/system/
-      notify:
         - Restart exporter
 
     - name: Add the user nginx-exporter
@@ -73,15 +60,34 @@
         shell: /bin/false
         system: true
 
+    - name: Copy exporter bin
+      ansible.builtin.copy:
+        src: ./files/nginx/nginx-prometheus-exporter
+        dest: /usr/local/bin/
+        mode: "0774"
+        owner: nginx-exporter
+        group: nginx-exporter
+      notify:
+        - Restart exporter
+
+    - name: Copy exporter service
+      ansible.builtin.copy:
+        src: ./files/nginx/nginx_exporter.service
+        dest: /etc/systemd/system/
+      notify:
+        - Restart exporter
+
   handlers:
+    
+    - name: Restart nginx
+      ansible.builtin.service:
+        name: nginx
+        state: restarted
+
     - name: Restart exporter
       ansible.builtin.service:
         name: nginx_exporter
         state: restarted
         daemon_reload: true
 
-    - name: Restart nginx
-      ansible.builtin.service:
-        name: nginx
-        state: restarted
 
