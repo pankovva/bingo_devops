@@ -1,0 +1,31 @@
+[db]
+%{ for vm in vms ~}
+%{ if vm.labels.group == "db" ~}
+${vm.name} ansible_host=${vm.name}.bingo.local
+%{ endif ~}
+%{ endfor ~}
+
+[backend]
+%{ for vm in vms ~}
+%{ if vm.labels.group == "backend" ~}
+${vm.name} ansible_host=${vm.name}.bingo.local
+%{ endif ~}
+%{ endfor ~}
+
+[frontend]
+%{ for vm in vms ~}
+%{ if vm.labels.group == "frontend" ~}
+${vm.name} ansible_host=${vm.network_interface.0.nat_ip_address}
+%{ endif ~}
+%{ endfor ~}
+
+[proxy:children]
+db
+backend
+
+[all:vars]
+ansible_user = ${ssh_user}
+ansible_ssh_private_key_file=./ansible_ssh_key
+
+[proxy:vars]
+ansible_ssh_common_args='-o ProxyCommand="ssh -W %h:%p -q bastion"'

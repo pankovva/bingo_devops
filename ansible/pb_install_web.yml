@@ -1,6 +1,6 @@
 ---
 - name: Install nginx
-  hosts: web
+  hosts: frontend
   become: true
 
   tasks:

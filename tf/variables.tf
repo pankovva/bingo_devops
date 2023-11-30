@@ -4,9 +4,12 @@ variable "yc_folder_id" {}
 variable "yc_zone" { default = "ru-central1-b" }
 variable "yc_key" {}
 
+variable "ssh_user" { default = "ansible" }
+
 variable "vms" {
-  type = map(object({
+  type = list(object({
     name          = string
+    label         = string
     cores         = number
     memory        = number
     core_fraction = number

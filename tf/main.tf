@@ -40,29 +40,32 @@ resource "yandex_dns_zone" "bingo-dns" {
 
 
 resource "yandex_compute_instance" "vm" {
-  for_each                  = var.vms
-  name                      = each.value["name"]
+  count                     = length(var.vms)
+  name                      = var.vms[count.index]["name"]
   allow_stopping_for_update = true
   platform_id               = "standard-v3"
-  hostname                  = each.value["name"]
+  hostname                  = var.vms[count.index]["name"]
+  labels = {
+    group = var.vms[count.index]["label"]
+  }
   resources {
-    cores         = each.value["cores"]
-    memory        = each.value["memory"]
-    core_fraction = each.value["core_fraction"]
+    cores         = var.vms[count.index]["cores"]
+    memory        = var.vms[count.index]["memory"]
+    core_fraction = var.vms[count.index]["core_fraction"]
   }
   network_interface {
     subnet_id = yandex_vpc_subnet.main-b.id
-    nat       = each.value["nat"]
+    nat       = var.vms[count.index]["nat"]
     dns_record {
-      fqdn        = each.value["name"]
+      fqdn        = var.vms[count.index]["name"]
       dns_zone_id = yandex_dns_zone.bingo-dns.id
     }
   }
   boot_disk {
     initialize_params {
       image_id = "fd8tkfhqgbht3sigr37c"
-      size     = each.value["disk_size"]
-      type = each.value["disk_type"]
+      size     = var.vms[count.index]["disk_size"]
+      type     = var.vms[count.index]["disk_type"]
     }
   }
 
@@ -70,6 +73,25 @@ resource "yandex_compute_instance" "vm" {
     preemptible = true
   }
   metadata = {
-    "user-data" = "${file("user.yaml")}"
+    "user-data" = <<-EOT
+      #cloud-config
+      users:
+        - name: ${var.ssh_user}
+          sudo: "ALL=(ALL) NOPASSWD:ALL"
+          shell: /bin/bash
+          ssh_authorized_keys:
+            - ${file("ansible_ssh_key.pub")}
+      EOT
   }
+}
+
+
+resource "local_file" "ansible_inventory" {
+  content = templatefile("ansible_inventory.tftpl",
+    {
+      vms      = yandex_compute_instance.vm,
+      ssh_user = var.ssh_user
+  })
+  filename        = "../ansible/inventory"
+  file_permission = "0644"
 }

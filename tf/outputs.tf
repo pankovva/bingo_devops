@@ -1,5 +1,14 @@
-output "vm_public_ip" {
-  #value = yandex_compute_instance.vm[each.key].network_interface.0.nat_ip_address
+output "frontend_ip" {
+  value = {
+    for vm in yandex_compute_instance.vm :
+    vm.name => vm.network_interface.0.nat_ip_address
+    if vm.network_interface.0.nat_ip_address != ""
+  }
+}
 
-  value = { for vm, vl in yandex_compute_instance.vm : vm => vl.network_interface.0.nat_ip_address }
+output "created_vm" {
+  value = {
+    for vm in yandex_compute_instance.vm :
+    "${vm.name}.bingo.local" => vm.labels.group
+  }
 }

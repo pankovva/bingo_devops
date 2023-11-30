@@ -1,6 +1,6 @@
 ---
 - name: Install APP
-  hosts: app
+  hosts: backend
   become: true
 
   tasks:

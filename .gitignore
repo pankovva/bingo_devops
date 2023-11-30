@@ -1,8 +1,9 @@
 tf/.terraform
 tf/.terraform.lock.hcl
-**/terraform.tfstate
-**/terraform.tfstate.backup
-**/bingo
-**/*.tar
+terraform.tfstate
+terraform.tfstate.backup
+bingo
+*.tar
+postgres_exporter
 ansible/venv
 **/.DS_Store
