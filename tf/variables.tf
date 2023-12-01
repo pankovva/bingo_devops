@@ -18,3 +18,7 @@ variable "vms" {
     nat           = bool
   }))
 }
+
+variable "local_comands" {
+  type = list(string)
+}

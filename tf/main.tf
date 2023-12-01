@@ -95,3 +95,59 @@ resource "local_file" "ansible_inventory" {
   filename        = "../ansible/inventory"
   file_permission = "0644"
 }
+
+resource "local_file" "ssh_config" {
+  content = templatefile("ssh_config.tftpl",
+    {
+      vms      = yandex_compute_instance.vm,
+      ssh_user = var.ssh_user
+  })
+  filename        = "../ansible/ssh/ssh_config"
+  file_permission = "0640"
+}
+
+resource "local_file" "known_host" {
+  content         = ""
+  filename        = "../ansible/ssh/known_hosts"
+  file_permission = "0640"
+}
+
+locals {
+
+  frontend_ip = [
+    for vm in yandex_compute_instance.vm :
+    vm.network_interface.0.nat_ip_address
+    if vm.network_interface.0.nat_ip_address != ""
+  ]
+}
+
+resource "null_resource" "wait_ssh_up" {
+  connection {
+    type        = "ssh"
+    user        = var.ssh_user
+    host        = local.frontend_ip[0]
+    password    = ""
+    private_key = file("ansible_ssh_key")
+    agent       = false
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+      "date",
+    ]
+  }
+}
+
+
+resource "null_resource" "ansible_pb" {
+  count = length(var.local_comands)
+  provisioner "local-exec" {
+    working_dir = "../ansible"
+    command     = var.local_comands[count.index]
+  }
+  depends_on = [
+    local_file.ssh_config,
+    local_file.ansible_inventory,
+    null_resource.wait_ssh_up
+  ]
+}
