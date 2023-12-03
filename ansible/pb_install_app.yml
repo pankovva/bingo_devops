@@ -12,6 +12,7 @@
           - curl
           - gnupg
           - python3-pip
+          - iptables-persistent
         update_cache: yes
 
     - name: Add Docker GPG apt Key
@@ -80,4 +81,17 @@
           - /var/run/docker.sock:/var/run/docker.sock
         env:
           AUTOHEAL_CONTAINER_LABEL: all
- 
+
+    - name: Template iptables
+      ansible.builtin.template:
+        src: ./templates/iptables.j2
+        dest: /etc/iptables/rules.v4
+      notify:
+        - Restart iptables
+
+  handlers:
+
+    - name: Restart iptables
+      ansible.builtin.service:
+        name: iptables
+        state: restarted

@@ -1,5 +1,7 @@
 tf/.terraform
 tf/.terraform.lock.hcl
+tf/files
+
 terraform.tfstate
 terraform.tfstate.backup
 bingo
@@ -7,3 +9,5 @@ bingo
 postgres_exporter
 ansible/venv
 **/.DS_Store
+tf-mgr_key.json
+ansible_ssh_key

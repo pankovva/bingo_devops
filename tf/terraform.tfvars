@@ -54,5 +54,4 @@ local_comands = [
   "./venv/bin/ansible-playbook pb_install_postgres.yml",
   "./venv/bin/ansible-playbook pb_install_app.yml",
   "./venv/bin/ansible-playbook pb_install_web.yml",
-
 ]

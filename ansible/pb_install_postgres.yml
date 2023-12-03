@@ -24,6 +24,7 @@
           - pgbouncer
           - libpq-dev
           - python3-psycopg2
+          - iptables-persistent
         update_cache: yes
 
     - name: Copy config
@@ -133,7 +134,13 @@
         dest: /etc/systemd/system/
       notify:
         - Restart exporter
-    
+
+    - name: Template iptables
+      ansible.builtin.template:
+        src: ./templates/iptables.j2
+        dest: /etc/iptables/rules.v4
+      notify:
+        - Restart iptables    
 
   handlers:
 
@@ -169,6 +176,11 @@
         name: postgres_exporter
         state: restarted
         daemon_reload: true
+
+    - name: Restart iptables
+      ansible.builtin.service:
+        name: iptables
+        state: restarted
 
 
 

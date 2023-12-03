@@ -11,6 +11,7 @@
           - curl
           - gnupg2
           - ca-certificates
+          - iptables-persistent
         update_cache: yes
 
     - name: Add nginx GPG apt Key
@@ -77,6 +78,13 @@
       notify:
         - Restart exporter
 
+    - name: Template iptables
+      ansible.builtin.template:
+        src: ./templates/iptables.j2
+        dest: /etc/iptables/rules.v4
+      notify:
+        - Restart iptables
+
   handlers:
     
     - name: Restart nginx
@@ -90,4 +98,8 @@
         state: restarted
         daemon_reload: true
 
+    - name: Restart iptables
+      ansible.builtin.service:
+        name: iptables
+        state: restarted
 

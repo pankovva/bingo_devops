@@ -133,21 +133,47 @@ resource "null_resource" "wait_ssh_up" {
 
   provisioner "remote-exec" {
     inline = [
-      "date",
+      "sleep 30",
     ]
   }
 }
 
 
-resource "null_resource" "ansible_pb" {
-  count = length(var.local_comands)
+resource "null_resource" "ansible_db" {
   provisioner "local-exec" {
     working_dir = "../ansible"
-    command     = var.local_comands[count.index]
+    command     = "./venv/bin/ansible-playbook pb_install_postgres.yml"
   }
   depends_on = [
     local_file.ssh_config,
     local_file.ansible_inventory,
     null_resource.wait_ssh_up
+  ]
+}
+
+resource "null_resource" "ansible_app" {
+  provisioner "local-exec" {
+    working_dir = "../ansible"
+    command     = "./venv/bin/ansible-playbook pb_install_app.yml"
+  }
+  depends_on = [
+    local_file.ssh_config,
+    local_file.ansible_inventory,
+    null_resource.wait_ssh_up,
+    null_resource.ansible_db,
+  ]
+}
+
+resource "null_resource" "ansible_web" {
+  provisioner "local-exec" {
+    working_dir = "../ansible"
+    command     = "./venv/bin/ansible-playbook pb_install_web.yml"
+  }
+  depends_on = [
+    local_file.ssh_config,
+    local_file.ansible_inventory,
+    null_resource.wait_ssh_up,
+    null_resource.ansible_db,
+    null_resource.ansible_app,
   ]
 }
